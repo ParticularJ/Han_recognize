@@ -18,15 +18,17 @@ int readformtext(vector<string> &path,vector<int> &catg) {
 		if (getline(svm_data, buf)) {
 			nLine++;
 			//	if (nLine % 2 == 0)//奇数行是图片全路径，偶数行是标签   
-			{
+			//{
 			//			catg.push_back(atoi(buf.c_str()));//atoi将字符串转换成整型，标志(0,1，2，...，9)，注意这里至少要有两个类别，否则会出错      
-			}
+			//}
 			//else
-			{
+			//{
 				path.push_back(buf);//图像路径      
-			}
+			//}
 		}
 	}
+
+	//因为一个汉字有5个样本，所以标签是0-4为一个汉字，以此类推
 	for (int i = 0; i != 500; i++) {
 		for (int j = 0; j < 5; j++) {
 			catg.push_back(i);
@@ -35,7 +37,8 @@ int readformtext(vector<string> &path,vector<int> &catg) {
 //	for (vector<int>::iterator i = catg.begin(); i != catg.end(); ++i) {
 //		cout << *i << endl;
 //	}
-	//cout << path.size();
+//	cout << path.size();
+//	cout << catg.size();
 	//cout << nLine;
 	svm_data.close();//关闭文件
 	return nLine;
@@ -64,38 +67,21 @@ void hogFeatur(Mat &data,Mat &lable,int line,vector<int> &catg,vector<string> &p
 		vector<float> descriptors;//结果数组       
 		hog->compute(trainImg, descriptors, Size(1, 1), Size(0, 0)); //调用计算函数开始计算  
 																
-		if (i == 0)
-		{
+		if (i == 0){
 			data = Mat::zeros(nImgNum, descriptors.size(), CV_32FC1); //根据输入图片大小进行分配空间   
 		}
-		cout << "HOG dims: " << descriptors.size() << endl;
+		//cout << "HOG dims: " << descriptors.size() << endl;
 		unsigned long n = 0;
 		for (vector<float>::iterator iter = descriptors.begin(); iter != descriptors.end(); iter++) {
 			data.at<float>(i, n) = *iter;
 			n++;
 		}
 		lable.at<int>(i, 0) = catg[i];
-
-		//PCA
-		int count = 0;
-		float sum = 0;
-		float sum_eigevalue = 0;
-		PCA pca(data, Mat(), 0);
-		//cout << pca.eigenvalues << endl;
-		for (int i = 0; i < pca.eigenvalues.cols; ++i) {
-			for (int j = 0; j < pca.eigenvalues.rows; ++j) {
-				sum += pca.eigenvalues.at<float>(i, j);
-				if (pca.eigenvalues.at<float>(i,j) > 0) {
-					sum_eigevalue += pca.eigenvalues.at<float>(i, j);
-					count++;
-				}
-			}
-		}
-		cout << sum_eigevalue/sum;
-		cout << count;
-		cout << endl;
-		//cout << pca.eigenvectors << endl;
 	}
+	//Pca_data 
+	PCA pca(data, Mat(), 0, 200);
+	data = (pca.eigenvectors*data.t()).t();
+	//cout << data.size();
 }
 
 void trainTemplate(Mat &a,Mat &b) {
@@ -114,7 +100,7 @@ void trainTemplate(Mat &a,Mat &b) {
 	Ptr<TrainData> tData = TrainData::create(a, ROW_SAMPLE, b);
 	svm->train(tData);
 	//☆☆利用训练数据和确定的学习参数,进行SVM学习☆☆☆☆       
-	svm->save("C://Myself//example//opencv_C++//characterSample//Train//Svm_data.xml");
+	svm->save("C://Myself//example//opencv_C++//characterSample//Train//Svm_data_pca.xml");
 }
 
 int main(){
@@ -129,10 +115,9 @@ int main(){
 	
 	//特征提取
 	hogFeatur(data_mat,label_mat,nLine,img_catg, img_path);
-
 	//SVM训练
 	long beginTime = clock();
-//	trainTemplate(data_mat, label_mat);
+	trainTemplate(data_mat, label_mat);
 	long endTime = clock();
 	cout << "Time:"<<endTime - beginTime;
 	return 0;
