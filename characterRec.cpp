@@ -22,27 +22,27 @@ void readSample(vector<string> &path) {
 }
 
 //识别汉字
-void recognize(vector<int> a) {
+void recognize(vector<int> a) {  
 	vector<string> str;
-	vector<string> str1;
-	vector<string> model;
-	string buf1;
+	vector<string> str1;  
+	vector<string> model;    
+	string buf1; 
 	string buf;
 	ifstream han_directory("C://Myself//example//opencv_C++//characterSample//character.txt");
 	ifstream compare_han("C://Myself//example//opencv_C++//characterSample//test//sample.txt");
 
 	while (han_directory) {
-		if (getline(han_directory, buf)) {
+		if (getline(han_directory, buf)) { 
 			str.push_back(buf);
 		}
 	}
-	han_directory.close();
-
+	han_directory.close(); 
+	 
 	while (compare_han) {
 		if (getline(compare_han, buf1)) {
 			model.push_back(buf1);
 		}
-	}
+	} 
 	compare_han.close();
 
 	for (vector<int>::iterator iter = a.begin(); iter != a.end(); iter++) {
@@ -61,7 +61,7 @@ void recognize(vector<int> a) {
 }
 
 //样本处理
-void processSample(int a, int b, vector<string> &path, Ptr<SVM> svm) {
+void processSample(int a, int b, vector<string> &path,/* Ptr<SVM> svm*/Ptr<RTrees> rf) {
 	Mat test=Mat::zeros(a,b,CV_32F);
 	Mat trainImg = Mat::zeros(a, b, CV_8UC3);
 	vector<int> sample;
@@ -81,41 +81,53 @@ void processSample(int a, int b, vector<string> &path, Ptr<SVM> svm) {
 		//调用计算函数开始计算 
 		hog->compute(trainImg, descriptors, Size(1, 1), Size(0, 0));
 		//获得图片的特征矩阵
-		Mat SVMtrainMat = Mat::zeros(1, descriptors.size(), CV_32FC1);
+		Mat trainMat = Mat::zeros(1, descriptors.size(), CV_32FC1);
 		int n = 0;
-		//将图片特征存入矩阵
+		//将图片特征存入矩阵  
 		for (vector<float>::iterator iter = descriptors.begin(); iter != descriptors.end(); iter++) {
-			SVMtrainMat.at<float>(0, n) = *iter;
+			trainMat.at<float>(0, n) = *iter;
 			n++;
 		}
 		FileStorage fs("C://Myself//example//opencv_C++//characterSample//Train//pca_eigenvectors.xml", FileStorage::READ);
 		Mat pca_eigenvectors;
 		fs["vectors"] >> pca_eigenvectors;
 		//cout << pca_eigenvectors.size();
-		SVMtrainMat = (pca_eigenvectors*SVMtrainMat.t()).t();
+		trainMat = (pca_eigenvectors*trainMat.t()).t();
 		//cout << SVMtrainMat.size() << endl;
-		ret = svm->predict(SVMtrainMat);
+		//predict with svm
+//		ret = svm->predict(SVMtrainMat); 
+		//predict with rf  
+		ret = rf->predict(trainMat); 
 		//cout << ret;
 		sample.push_back(ret);
 	}
 	recognize(sample);
 }
-
+ 
 int main() {
 	int ImgWidht = 24;
 	int ImgHeight = 24;
 	vector<string> img_tst_path;
 	//加载训练模型
 	long beginTime = clock();
-	Ptr<SVM> svm = StatModel::load<SVM>("C://Myself//example//opencv_C++//characterSample//Train//Svm_data_pca.xml");
+
+	//RF模型
+	Ptr<RTrees> rf = StatModel::load<RTrees>("C://Myself//example//opencv_C++//characterSample//Train//RF_data_pca.xml");
+
+	//SVM模型
+//	Ptr<SVM> svm = StatModel::load<SVM>("C://Myself//example//opencv_C++//characterSample//Train//Svm_data_pca.xml");
 
 	long endTime = clock();
 	cout << "Time" << endTime - beginTime << endl;
 	//读取样本
 	long beginTime1 = clock();
 	readSample(img_tst_path);
-	//处理样本与识别
-	processSample(ImgWidht, ImgHeight, img_tst_path,svm);
+	//处理样本与识别with RF
+	processSample(ImgWidht, ImgHeight, img_tst_path, rf);
+
+
+	//处理样本与识别with SVM
+//	processSample(ImgWidht, ImgHeight, img_tst_path,svm);
 	long endTime1 = clock();
 	cout << "Time:" << endTime1 - beginTime1 << endl;
 	return 0;

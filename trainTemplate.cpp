@@ -79,7 +79,7 @@ void hogFeatur(Mat &data,Mat &lable,int line,vector<int> &catg,vector<string> &p
 		lable.at<int>(i, 0) = catg[i];
 	}
 	//Pca_data 
-	PCA pca(data, Mat(), 0, 30);
+	PCA pca(data, Mat(), 0, 70);
 	
 	//save PCA eigenvectors
 	FileStorage fs("C://Myself//example//opencv_C++//characterSample//Train//pca_eigenvectors.xml", FileStorage::WRITE);
@@ -88,24 +88,45 @@ void hogFeatur(Mat &data,Mat &lable,int line,vector<int> &catg,vector<string> &p
 	//cout << data.size();
 }
 
-void trainTemplate(Mat &a,Mat &b) {
-	//SVM algorithm
-	Ptr<SVM> svm = SVM::create();
-	svm->setType(SVM::C_SVC);
-	svm->setKernel(SVM::RBF);
-	//svm->setDegree(10.0);
-	svm->setGamma(0.09);
-	//svm->setCoef0(1.0);
-	svm->setC(10.0);
-	//svm->setNu(0.5);
-	//svm->setP(1.0);
-	svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 1e-6));
-	//☆☆☆☆☆☆☆☆☆(5)SVM学习☆☆☆☆☆☆☆☆☆☆☆☆   
-	Ptr<TrainData> tData = TrainData::create(a, ROW_SAMPLE, b);
-	svm->train(tData);
-	//☆☆利用训练数据和确定的学习参数,进行SVM学习☆☆☆☆       
-	svm->save("C://Myself//example//opencv_C++//characterSample//Train//Svm_data_pca.xml");
+
+// Random Forest
+void trainTemplate(Mat &a, Mat &b) {
+	Ptr<RTrees> model;
+	Ptr<TrainData> tdata = TrainData::create(a, ROW_SAMPLE, b);
+	model = RTrees::create();
+	model->setMaxDepth(INT_MAX);
+	model->setMinSampleCount(10);
+	model->setRegressionAccuracy(0);
+	model->setUseSurrogates(false);
+	model->setMaxCategories(15);
+	model->setPriors(Mat());
+	model->setCalculateVarImportance(true);
+	model->setActiveVarCount(0);
+	model->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 0.001f));
+	model->train(tdata);
+	model->save("C://Myself//example//opencv_C++//characterSample//Train//RF_data_pca.xml");
 }
+
+
+//SVM
+//void trainTemplate(Mat &a,Mat &b) {
+//	//SVM algorithm
+//	Ptr<SVM> svm = SVM::create();
+//	svm->setType(SVM::C_SVC);
+//	svm->setKernel(SVM::RBF);
+//	//svm->setDegree(10.0);
+//	svm->setGamma(0.09);
+//	//svm->setCoef0(1.0);
+//	svm->setC(10.0);
+//	//svm->setNu(0.5);
+//	//svm->setP(1.0);
+//	svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 1e-6));
+//	//☆☆☆☆☆☆☆☆☆(5)SVM学习☆☆☆☆☆☆☆☆☆☆☆☆   
+//	Ptr<TrainData> tData = TrainData::create(a, ROW_SAMPLE, b);
+//	svm->train(tData);
+//	//☆☆利用训练数据和确定的学习参数,进行SVM学习☆☆☆☆       
+//	svm->save("C://Myself//example//opencv_C++//characterSample//Train//Svm_data_pca.xml");
+//}
 
 int main(){
 	//图片路径
